@@ -1383,6 +1383,15 @@ local Success, Error = pcall(function()
                 Rounds = CurrentWeapon.Rounds or 30
             })
             
+            local FinalHitPosition = #Hits > 0 and Hits[#Hits].Position or FirstHitPosition
+            local TracerDistance = (FinalHitPosition - CameraPosition).Magnitude
+            
+            ByteNet.VFX.CreateTracer.Send({
+                Distance = TracerDistance,
+                Origin = CameraPosition,
+                Target = FinalHitPosition
+            })
+            
             Ragebot.LastShot = CurrentTime
         end
         
