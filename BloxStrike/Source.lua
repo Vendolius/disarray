@@ -60,6 +60,7 @@
         local RunService = GetService(Game, "RunService")
         local Workspace = GetService(Game, "Workspace")
         local Players = GetService(Game, "Players")
+        local Lighting = GetService(Game, "Lighting")
 
         local RenderStepped = RunService.RenderStepped
         local Stepped = RunService.Stepped
