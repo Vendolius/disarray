@@ -82,13 +82,28 @@
 
         local Draw     = loadstring(readfile("disarray/Libraries/Draw.lua"))()
         local Menu, Flags = loadstring(readfile("disarray/Libraries/Menu.lua"))():Load({
-            CheatName = "Disarray",
+            CheatName = "disarray",
             CheatGame = "BloxStrike",
             CheatUser = LocalPlayer.Name,
             Parent = Draw.Folder,
-            ZIndex = 1,
+            ZIndex = 1000,
+            
             Window = {
-                Size = NewUDim2(0, 600, 0, 400)
+                Position = NewUDim2(0.5, 0, 0.5, 0),
+                Size = NewUDim2(0, 660, 0, 560),
+                
+                Tabs = {
+                    {"Rage"},
+                    {"Movement"},
+                    {"Anti Aim"},
+                    {"Visuals"},
+                    {"Config", Open = true}
+                }
+            },
+            
+            Theme = {
+                ["Accent"] = NewRGB(158, 18, 116),
+                ["Risky"] = NewRGB(182, 182, 101)
             }
         })
 
@@ -1184,25 +1199,25 @@
         end
         
         Visuals.ApplyWorldVisuals = function()
-            if Flags["visuals world ambient enabled"] and Flags["visuals world ambient enabled"].Value then
-                local IndoorColor = Flags["visuals world ambient indoor"] and Flags["visuals world ambient indoor"].Color or NewRGB(255, 255, 255)
-                local OutdoorColor = Flags["visuals world ambient outdoor"] and Flags["visuals world ambient outdoor"].Color or NewRGB(255, 255, 255)
-                Lighting.Ambient = IndoorColor
-                Lighting.OutdoorAmbient = OutdoorColor
-            else
+            if not Flags["visuals world ambient enabled"] or not Flags["visuals world ambient enabled"].Value then
                 Lighting.Ambient = Visuals.OriginalLighting.Ambient
                 Lighting.OutdoorAmbient = Visuals.OriginalLighting.OutdoorAmbient
-            end
-            
-            if Flags["visuals world force time enabled"] and Flags["visuals world force time enabled"].Value then
-                local TimeOfDay = Flags["visuals world time"] and Flags["visuals world time"].Value or 14
-                Lighting.ClockTime = TimeOfDay
             else
-                Lighting.ClockTime = Visuals.OriginalLighting.ClockTime
+                Lighting.Ambient = Flags["visuals world ambient indoor"].Color
+                Lighting.OutdoorAmbient = Flags["visuals world ambient outdoor"].Color
             end
             
-            if Flags["visuals world brightness enabled"] and Flags["visuals world brightness enabled"].Value then
-                local BrightnessMode = Flags["visuals world brightness"] and Flags["visuals world brightness"].Value or "Fullbright"
+            if not Flags["visuals world force time enabled"] or not Flags["visuals world force time enabled"].Value then
+                Lighting.ClockTime = Visuals.OriginalLighting.ClockTime
+            else
+                Lighting.ClockTime = Flags["visuals world time"].Value
+            end
+            
+            if not Flags["visuals world brightness enabled"] or not Flags["visuals world brightness enabled"].Value then
+                Lighting.Brightness = Visuals.OriginalLighting.Brightness
+                Lighting.GlobalShadows = Visuals.OriginalLighting.GlobalShadows
+            else
+                local BrightnessMode = Flags["visuals world brightness"].Value
                 
                 if BrightnessMode == "Fullbright" then
                     Lighting.Brightness = 2
@@ -1212,9 +1227,6 @@
                 elseif BrightnessMode == "Nightmode" then
                     Lighting.Brightness = 0
                 end
-            else
-                Lighting.Brightness = Visuals.OriginalLighting.Brightness
-                Lighting.GlobalShadows = Visuals.OriginalLighting.GlobalShadows
             end
         end
             
@@ -1576,7 +1588,7 @@
 
         -- Menu Movement Section
         do
-            local MovementPage = Menu.Window.Pages[5]
+            local MovementPage = Menu.Window.Pages[2]
 
             local MovementSection = MovementPage:CreateSection({Name = "Movement", Side = 1, Length = 1}) do
                 MovementSection:CreateToggle({Name = "Speed hack", Flag = "movement speed hack enabled"})
@@ -1588,7 +1600,7 @@
 
         -- Menu Ragebot Section
         do
-            local CombatPage = Menu.Window.Pages[2]
+            local CombatPage = Menu.Window.Pages[1]
 
             local RagebotSection = CombatPage:CreateSection({Name = "Ragebot", Side = 1, Length = 1}) do
                 RagebotSection:CreateToggle({Name = "Enabled", Flag = "ragebot enabled"})
