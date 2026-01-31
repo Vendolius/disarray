@@ -1283,21 +1283,15 @@ local Success, Error = pcall(function()
                             local FovAngle = Atan2(FovDistance, ScreenSizeY) * ToDeg
                             
                             if FovAngle <= FovLimit and Distance < BestDistance then
-                                local CanHit = false
-                                
                                 if AutoWall then
                                     local CurrentWeapon = InventoryController.getCurrentEquipped()
                                     local WeaponPenetration = CurrentWeapon and CurrentWeapon.Properties and CurrentWeapon.Properties.Penetration or 0
-                                    CanHit = Ragebot.CanPenetrate(CameraPosition, Direction, Distance, WeaponPenetration, Data.Character)
+                                    
+                                    if Ragebot.CanPenetrate(CameraPosition, Direction, Distance, WeaponPenetration, Data.Character) then
+                                        BestTarget = Data
+                                        BestDistance = Distance
+                                    end
                                 else
-                                    local RayParams = RaycastParams.new()
-                                    RayParams.FilterType = Enum.RaycastFilterType.Exclude
-                                    RayParams.FilterDescendantsInstances = {LocalPlayer.Character, CurrentCamera}
-                                    local Result = Workspace:Raycast(CameraPosition, Direction * Distance, RayParams)
-                                    CanHit = Result and Result.Instance and Result.Instance:IsDescendantOf(Data.Character)
-                                end
-                                
-                                if CanHit then
                                     BestTarget = Data
                                     BestDistance = Distance
                                 end
@@ -1311,14 +1305,16 @@ local Success, Error = pcall(function()
         end
         
         Ragebot.Shoot = function()
+            if not (Flags["ragebot enabled"] and Flags["ragebot enabled"].Value) then
+                return
+            end
+            
             if not (Flags["ragebot auto shoot"] and Flags["ragebot auto shoot"].Value) then
                 return
             end
             
             local CurrentWeapon = InventoryController.getCurrentEquipped()
-            if not CurrentWeapon or not CurrentWeapon.Properties then return end
-            
-            if CurrentWeapon.Rounds <= 0 then
+            if not CurrentWeapon or not CurrentWeapon.Properties or not CurrentWeapon.Rounds or CurrentWeapon.Rounds <= 0 then
                 return
             end
             
@@ -1330,11 +1326,15 @@ local Success, Error = pcall(function()
             end
             
             local Target = Ragebot.GetBestTarget()
-            if not Target then return end
+            if not Target then
+                return
+            end
             
             local TargetPart = Flags["ragebot target part"] and Flags["ragebot target part"].Value or "Head"
             local TargetBodyPart = Target.BodyParts[TargetPart] or Target.BodyParts.Head
-            if not TargetBodyPart then return end
+            if not TargetBodyPart then
+                return
+            end
             
             local TargetPosition = TargetBodyPart.Position
             local CameraPosition = CurrentCamera.CFrame.Position
