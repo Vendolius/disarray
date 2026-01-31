@@ -4279,7 +4279,7 @@ function Library:Load(Parameters)
     return Menu, Flags
 end
 
-if true then
+if false then
     local Menu = Library:Load()
 
     local LegitPage = Menu.Window.Pages[3]
