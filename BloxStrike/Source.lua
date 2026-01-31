@@ -65,8 +65,9 @@ local Success, Error = pcall(function()
 
     local Draw     = loadstring(readfile("disarray/Libraries/Draw.lua"))()
 
+    local Camera   = {}
     local Info     = {}
-    local ESP      = {}
+    local Esp      = {}
 
 
     local function RecursivePrint(Table, Indent)
@@ -442,7 +443,6 @@ local Success, Error = pcall(function()
                     local Renders = Data.Renders
 
                     Renders[1].Visible = false
-
                     continue
                 end
 
@@ -451,7 +451,6 @@ local Success, Error = pcall(function()
 
                 if not OnScreen then
                     Renders[1].Visible = false
-
                     continue
                 end
 
