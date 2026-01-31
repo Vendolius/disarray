@@ -166,11 +166,7 @@ function Library:Load(Parameters)
 
         Assets = {},
         Fonts = {},
-        Draw = {},
-
-        Keys = {
-            [Enum.KeyCode.Home] = true
-        }
+        Draw = {}
     }
     Menu.__index = Menu
 
@@ -348,6 +344,8 @@ function Library:Load(Parameters)
     -- Draw
 	do
 		function Draw:ScreenGui(Properties)
+			assert(Properties, "No properties for [ScreenGui] - " .. Traceback())
+
 			local Render = NewInstance("ScreenGui")
 			Render.ZIndexBehavior = Enum.ZIndexBehavior.Global
 			Render.IgnoreGuiInset = true
@@ -361,6 +359,8 @@ function Library:Load(Parameters)
 		end
 		
 		function Draw:Frame(Properties)
+			assert(Properties, "No properties for [Frame] - " .. Traceback())
+
 			local Render = NewInstance("Frame")
 			Render.BorderSizePixel = 1
 			Render.BackgroundTransparency = 0
@@ -377,6 +377,8 @@ function Library:Load(Parameters)
 		end
 		
 		function Draw:ScrollingFrame(Properties)
+			assert(Properties, "No properties for [ScrollingFrame] - " .. Traceback())
+
 			local Render = NewInstance("ScrollingFrame")
 			Render.BorderSizePixel = 1
 			Render.BackgroundTransparency = 0
@@ -393,6 +395,8 @@ function Library:Load(Parameters)
 		end
 		
 		function Draw:ImageLabel(Properties)
+			assert(Properties, "No properties for [ImageLabel] - " .. Traceback())
+
 			local Render = NewInstance("ImageLabel")
 			Render.BorderSizePixel = 1
 			Render.BackgroundTransparency = 0
@@ -411,6 +415,8 @@ function Library:Load(Parameters)
 		end
 		
 		function Draw:ImageButton(Properties)
+			assert(Properties, "No properties for [ImageButton] - " .. Traceback())
+
 			local Render = NewInstance("ImageButton")
 			Render.BorderSizePixel = 1
 			Render.BackgroundTransparency = 0
@@ -430,6 +436,8 @@ function Library:Load(Parameters)
 		end
 		
 		function Draw:TextLabel(Properties)
+			assert(Properties, "No properties for [TextLabel] - " .. Traceback())
+
 			local Render = NewInstance("TextLabel")
 			Render.BackgroundTransparency = 1
 			Render.TextStrokeTransparency = 1
@@ -451,6 +459,8 @@ function Library:Load(Parameters)
 		end
 
         function Draw:TextButton(Properties)
+            assert(Properties, "No properties for [TextButton] - " .. Traceback())
+
             local Render = NewInstance("TextButton")
             Render.BorderSizePixel = 1
             Render.BackgroundTransparency = 0
@@ -474,6 +484,8 @@ function Library:Load(Parameters)
         end
 
         function Draw:Textbox(Properties)
+            assert(Properties, "No properties for [Textbox] - " .. Traceback())
+
             local Render = NewInstance("TextBox")
             Render.BorderSizePixel = 1
             Render.BackgroundTransparency = 0
@@ -497,6 +509,8 @@ function Library:Load(Parameters)
         end
 		
 		function Draw:UIListLayout(Properties)
+			assert(Properties, "No properties for [UIListLayout] - " .. Traceback())
+
 			local Render = NewInstance("UIListLayout")
 			Render.ItemLineAlignment = "Start"
             Render.FillDirection = "Vertical"
@@ -512,6 +526,8 @@ function Library:Load(Parameters)
 		end
 
         function Draw:UIStroke(Properties)
+			assert(Properties, "No properties for [UIStroke] - " .. Traceback())
+
             local Render = NewInstance("UIStroke")
             Render.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
             Render.LineJoinMode = Enum.LineJoinMode.Miter
@@ -528,6 +544,8 @@ function Library:Load(Parameters)
         end
 
         function Draw:UIGradient(Properties)
+            assert(Properties, "No properties for [UIGradient] - " .. Traceback())
+
             local Render = NewInstance("UIGradient")
             Render.Offset = NewVector2(0, 0)
             --Render.Transparency = 0
@@ -618,7 +636,7 @@ function Library:Load(Parameters)
         function Menu:RegisterFlag(Element, Flag)
             if not Element or not Flag then return end
 
-            -- Nested flags: {"Category", "Enabled"} → Flags["Category"]["Enabled"]
+            -- Nested flags: {"category", "enabled"} → Flags["category"]["enabled"]
             if typeof(Flag) == "table" then
                 local Current = Flags
 
@@ -858,8 +876,14 @@ function Library:Load(Parameters)
                     end)
                 end)
 
+                local MenuKeys = {
+                    [Enum.KeyCode.Home] = true,
+                    [Enum.KeyCode.Delete] = true,
+                    [Enum.KeyCode.Backquote] = true,
+                }
+
                 Menu.InputBegan[#Menu.InputBegan + 1] = function(Input)
-                    if Input.UserInputType == Enum.UserInputType.Keyboard and Menu.Keys[Input.KeyCode] then
+                    if Input.UserInputType == Enum.UserInputType.Keyboard and MenuKeys[Input.KeyCode] then
                         Self[Self.IsOpen and "Close" or "Open"](Self)
                     end
                 end
@@ -1218,6 +1242,7 @@ function Library:Load(Parameters)
                     local Name = Parameters.Name or "New Section"
                     local Side = Parameters.Side or 1
                     local Length = Parameters.Length or 0.25
+                    local Resizable = Parameters.Resizable == true
 
                     local Section = {
                         Class = "Section",
@@ -1225,6 +1250,7 @@ function Library:Load(Parameters)
                         Name = Name,
                         Side = Side,
                         Length = Length,
+                        Resizable = Resizable,
 
                         Offset = 20,
 
@@ -1336,12 +1362,34 @@ function Library:Load(Parameters)
                             Visible = true
                         }) ZIndex += 1
 
+                        ZIndex += 1
+
+                        local Sizer
+                        if Resizable then
+                            Sizer = Draw:ImageButton({
+                                Name = "Sizer",
+                                Parent = Outline,
+                                Position = NewUDim2(1, -6, 1, -6),
+                                Size = NewUDim2(0, 6, 0, 6),
+                                BackgroundTransparency = 1,
+                                BorderSizePixel = 0,
+                                Image = Assets["Sizer"],
+                                ImageColor3 = Menu.Theme["Accent"],
+                                ImageTransparency = 0,
+                                Visible = true,
+                                ZIndex = ZIndex + 1000
+                            })
+                        end
+
+                        ZIndex += 1
+
                         Section.Outline = Outline
                         Section.ContentHolder = ContentHolder
                         Section.Title = Title
                         Section.TitleBackground = TitleBackground
                         Section.ArrowUp = ArrowUp
                         Section.ArrowDown = ArrowDown
+                        Section.Sizer = Sizer
                         Section.ZIndex = ZIndex
                     end
 
@@ -1625,6 +1673,75 @@ function Library:Load(Parameters)
                             Page:UpdateSectionSizes()
                             OriginalSide = Section.Side
                         end)
+                    end
+
+
+                    -- Resizing
+                    do
+                        if Section.Resizable and Section.Sizer then
+                            local Resizing = false
+                            local ResizeConnection
+                            local KeyConnection
+                            local MinSizeX = 200
+                            local MinSizeY = 100
+                            local OriginalWidth, OriginalHeight
+
+                            Section.Sizer.InputBegan:Connect(function(Input)
+                                if Input.UserInputType ~= Enum.UserInputType.MouseButton1 then 
+                                    return 
+                                end
+
+                                Resizing = true
+                                local StartMousePosition = NewVector2(Mouse.X, Mouse.Y)
+                                local StartSize = Section.Outline.Size
+                                
+                                if not OriginalWidth then
+                                    OriginalWidth = Section.Outline.AbsoluteSize.X
+                                    OriginalHeight = Section.Outline.AbsoluteSize.Y
+                                end
+
+                                Section.Outline.BorderColor3 = Theme["Accent"]
+
+                                ResizeConnection = RenderStepped:Connect(function()
+                                    if not Resizing then return end
+
+                                    local Delta = NewVector2(Mouse.X, Mouse.Y) - StartMousePosition
+                                    local NewSizeX = Clamp(StartSize.X.Offset + Delta.X, MinSizeX, Page.ContentHolder.AbsoluteSize.X - Section.Outline.AbsolutePosition.X + Page.ContentHolder.AbsolutePosition.X - 20)
+                                    local NewSizeY = Clamp(StartSize.Y.Offset + Delta.Y, MinSizeY, Page.ContentHolder.AbsoluteSize.Y - (Section.Outline.AbsolutePosition.Y - Page.ContentHolder.AbsolutePosition.Y) - 20)
+
+                                    -- 5 pixel snapping
+                                    NewSizeX = Floor(NewSizeX / 5 + 0.5) * 5
+                                    NewSizeY = Floor(NewSizeY / 5 + 0.5) * 5
+
+                                    Section.Outline.Size = NewUDim2(0, NewSizeX, 0, NewSizeY)
+                                    Section:UpdateScroll()
+                                end)
+
+                                KeyConnection = UserInputService.InputBegan:Connect(function(KeyInput)
+                                    if KeyInput.KeyCode == Enum.KeyCode.R and Resizing then
+                                        Section.Outline.Size = NewUDim2(0, OriginalWidth, 0, OriginalHeight)
+                                        Section:UpdateScroll()
+                                    end
+                                end)
+                            end)
+
+                            UserInputService.InputEnded:Connect(function(Input)
+                                if Input.UserInputType ~= Enum.UserInputType.MouseButton1 or not Resizing then return end
+                                Resizing = false
+
+                                if ResizeConnection then
+                                    ResizeConnection:Disconnect()
+                                    ResizeConnection = nil
+                                end
+
+                                if KeyConnection then
+                                    KeyConnection:Disconnect()
+                                    KeyConnection = nil
+                                end
+
+                                Section.Outline.BorderColor3 = NewRGB(12, 12, 12)
+                            end)
+                        end
                     end
 
                     -- Connections
@@ -1939,11 +2056,6 @@ function Library:Load(Parameters)
                     Visible = true
                 }) ZIndex += 1
 
-                local Constraint = NewInstance("UISizeConstraint")
-                Constraint.Parent = Framework
-                Constraint.MinSize = Vector2.new(0, 0)
-                Constraint.MaxSize = Vector2.new(200 + 89, math.huge)
-
                 if Self.Named then
                     local Title = Draw:TextLabel({
                         Parent = Framework,
@@ -2085,30 +2197,29 @@ function Library:Load(Parameters)
         end
 
         function Slider:SetValue(Value, NoCallback)
-            local Self = self
-            local Decimals = Self.Decimals
-            local Custom = Self.Custom
+            local Slider = self
+            local Decimals = Slider.Decimals
+            local Custom = Slider.Custom
 
-            Value = Clamp(Floor(Value * Decimals + 0.5) / Decimals, Self.Minimum, Self.Maximum)
+            Value = Clamp(Floor(Value * Decimals + 0.5) / Decimals, Slider.Minimum, Slider.Maximum)
 
-            Self.Value = Value
-            Self.Plus.Visible = Value < Self.Maximum
-            Self.Minus.Visible = Value > Self.Minimum
-            Self.Inline.Size = NewUDim2((Value - Self.Minimum) / (Self.Maximum - Self.Minimum), 0, 1, 0)
+            Slider.Value = Value
+            Slider.Plus.Visible = Value < Slider.Maximum
+            Slider.Minus.Visible = Value > Slider.Minimum
+            Slider.Inline.Size = NewUDim2((Value - Slider.Minimum) / (Slider.Maximum - Slider.Minimum), 0, 1, 0)
 
-            local CustomValue = Custom and Custom(Value)
-            Self.TextValue.Text = CustomValue or (Value .. Self.Suffix)
+            Slider.TextValue.Text = (Custom and Value == Custom[2]) and Custom[1] or (Value .. Slider.Suffix)
 
             if NoCallback then return end
-            Self.Callback(Value)
+            Slider.Callback(Value)
         end
 
         function Slider:HandleInput()
-            local Self = self
-            local SizeX = Self.Outline.AbsoluteSize.X
-            local Decimals, Minimum, Maximum = Self.Decimals, Self.Minimum, Self.Maximum
+            local Slider = self
+            local SizeX = Slider.Outline.AbsoluteSize.X
+            local Decimals, Minimum, Maximum = Slider.Decimals, Slider.Minimum, Slider.Maximum
 
-            Self:SetValue(Clamp(Floor((Minimum + (Maximum - Minimum) * Clamp(Mouse.X - Self.Inline.AbsolutePosition.X, 0, SizeX) / SizeX) * Decimals + 0.5) / Decimals, Minimum, Maximum))
+            Slider:SetValue(Clamp(Floor((Minimum + (Maximum - Minimum) * Clamp(Mouse.X - Slider.Inline.AbsolutePosition.X, 0, SizeX) / SizeX) * Decimals + 0.5) / Decimals, Minimum, Maximum))
         end
     end
 
@@ -2165,11 +2276,6 @@ function Library:Load(Parameters)
                     ZIndex = ZIndex,
                     Visible = true
                 }) ZIndex += 1
-
-                local Constraint = NewInstance("UISizeConstraint")
-                Constraint.Parent = Framework
-                Constraint.MinSize = Vector2.new(0, 0)
-                Constraint.MaxSize = Vector2.new(200 + 89, math.huge)
 
                 if Self.Named then
                     local Title = Draw:TextLabel({
@@ -2257,7 +2363,7 @@ function Library:Load(Parameters)
             local Combobox = self
             local OptionsIndex = #Combobox.Options
 
-            if OptionsIndex == 0 then
+            if OptionsIndex < 1 then
                 return
             end
 
@@ -2333,7 +2439,7 @@ function Library:Load(Parameters)
                         end
                     end
 
-                    for k = 1, OptionsIndex do -- TODO: Switch this
+                    for k = 1, OptionsIndex do -- TODO: Switch this.
                         local OpenText = Combobox.OpenContent.Texts[k]
                         local OpenOption = OpenText.Text
                         local IsChosenInner = Find(Combobox.Value, OpenOption) ~= nil
@@ -2446,11 +2552,6 @@ function Library:Load(Parameters)
                     Visible = true
                 }) ZIndex += 1
 
-                local Constraint = NewInstance("UISizeConstraint")
-                Constraint.Parent = Framework
-                Constraint.MinSize = Vector2.new(0, 0)
-                Constraint.MaxSize = Vector2.new(200 + 89, math.huge)
-
                 if Self.Named then
                     local Title = Draw:TextLabel({
                         Parent = Framework,
@@ -2537,7 +2638,7 @@ function Library:Load(Parameters)
             local Dropdown = self
             local OptionsIndex = #Dropdown.Options
 
-            if OptionsIndex == 0 then
+            if OptionsIndex < 1 then
                 return
             end
 
@@ -2703,11 +2804,6 @@ function Library:Load(Parameters)
                     ZIndex = ZIndex,
                     Visible = true
                 }) ZIndex += 1
-
-                local Constraint = NewInstance("UISizeConstraint")
-                Constraint.Parent = Framework
-                Constraint.MinSize = Vector2.new(0, 0)
-                Constraint.MaxSize = Vector2.new(200 + 89, math.huge)
 
                 local Outline = Draw:Frame({
                     Parent = Framework,
@@ -3294,6 +3390,11 @@ function Library:Load(Parameters)
             -- Connections
             do
                 Self.Framework.MouseButton1Down:Connect(function()
+                    if Self.SelectingConnection then
+                        Self.SelectingConnection:Disconnect()
+                        Self.SelectingConnection = nil
+                    end
+
                     Self.IsSelecting = true
                     Self.Framework.TextColor3 = NewRGB(255, 0, 0)
 
@@ -3308,8 +3409,10 @@ function Library:Load(Parameters)
                             Self.IsSelecting = false
                             Self.Framework.TextColor3 = NewRGB(114, 114, 114)
 
+                            if Self.SelectingConnection then
                             Self.SelectingConnection:Disconnect()
                             Self.SelectingConnection = nil
+                            end
                         end
                     end)
                 end)
@@ -3401,7 +3504,7 @@ function Library:Load(Parameters)
             local Hotkey = self
             local ModesIndex = #Hotkey.Modes
 
-            if ModesIndex == 0 then
+            if ModesIndex < 1 then
                 return
             end
 
@@ -3510,6 +3613,13 @@ function Library:Load(Parameters)
                 Hotkey.IsOpen = false
                 Menu.CurrentContent = nil
 
+                if Hotkey.SelectingConnection then
+                    Hotkey.SelectingConnection:Disconnect()
+                    Hotkey.SelectingConnection = nil
+                    Hotkey.IsSelecting = false
+                    Hotkey.Framework.TextColor3 = NewRGB(114, 114, 114)
+                end
+
                 Hotkey.OpenContent.RepositionConnection:Disconnect()
                 Destroy(Hotkey.OpenContent.Framework)
 
@@ -3572,11 +3682,6 @@ function Library:Load(Parameters)
                     ZIndex = ZIndex,
                     Visible = true
                 }) ZIndex += 1
-
-                local Constraint = NewInstance("UISizeConstraint")
-                Constraint.Parent = Framework
-                Constraint.MinSize = Vector2.new(0, 0)
-                Constraint.MaxSize = Vector2.new(200 + 89, math.huge)
 
                 if Self.Named then
                     local Title = Draw:TextLabel({
@@ -4272,197 +4377,34 @@ function Library:Load(Parameters)
         delfile("import")
     end
 
+    function Menu:Unload()
+        if Menu.Window then
+            Menu.Window = nil
+        end
+        
+        if Menu.Overlay then
+            Destroy(Menu.Overlay)
+            Menu.Overlay = nil
+        end
+        
+        Menu.CurrentNotifications = {}
+        Menu.CurrentContent = nil
+        
+        for Index in next, Flags do
+            Flags[Index] = nil
+        end
+        
+        local ExistingOverlay = Parameters.Parent:FindFirstChild("ScreenGui")
+        if ExistingOverlay then
+            Destroy(ExistingOverlay)
+        end
+    end
+
     if Parameters.Window then
         Menu.Window = Window.new(Parameters.Window)
     end
 
     return Menu, Flags
-end
-
-if false then
-    local Menu = Library:Load()
-
-    local LegitPage = Menu.Window.Pages[3]
-    local VisualsPage = Menu.Window.Pages[4]
-
-    LegitPage:CreateCategories()
-
-    for i = 1, 6 do
-        local Section = LegitPage:CreateSection({Category = i, Name = "Aim Assist", Side = 1, Length = 1}) do
-            Section:CreateToggle({Name = "Enabled"}):CreateHotkey({Mode = "On hotkey"})
-            Section:CreateSlider({Name = "Maximum FOV", Suffix = "°", Value = 10, Minimum = 0, Maximum = 90, Decimals = 0.1})
-            Section:CreateSlider({Name = "Speed", Suffix = "%", Value = 50, Minimum = 1, Maximum = 100})
-            Section:CreateDropdown({Name = "Smoothing", Value = "Linear", Options = {"Linear", "Exponential"}})
-            Section:CreateSlider({Name = "Enemy switching delay", Suffix = "ms", Value = 100, Minimum = 0, Maximum = 2000, Custom = function(Value)
-                if Value == 0 then
-                    return "Off"
-                end
-            end})
-            Section:CreateSlider({Name = "Accuracy", Suffix = "%", Value = 60, Minimum = 0, Maximum = 100})
-            Section:CreateDropdown({Name = "Hitscan priority", Value = "Closest", Options = {"Closest", "Head", "Body"}})
-            Section:CreateCombobox({Name = "Hitscan hitboxes", Value = {"Head", "Body", "Arms", "Legs"}, Options = {"Head", "Body", "Arms", "Legs"}})
-            Section:CreateToggle({Name = "Adjust for bullet drop"})
-            Section:CreateToggle({Name = "Adjust for target movement"})
-            Section:CreateToggle({Name = "Visualize FOV"})
-        end
-
-        local Section = LegitPage:CreateSection({Category = i, Name = "Trigger Bot", Side = 2, Length = 0.5}) do
-            Section:CreateToggle({Name = "Enabled"}):CreateHotkey({Mode = "On hotkey"})
-            Section:CreateSlider({Name = "Reaction time", Suffix = "ms", Value = 120, Minimum = 0, Maximum = 400, Custom = function(Value)
-                if Value == 0 then
-                    return "Off"
-                end
-            end})
-            Section:CreateCombobox({Name = "Triggerbot hitboxes", Value = {"Head", "Body", "Arms", "Legs"}, Options = {"Head", "Body", "Arms", "Legs"}})
-            Section:CreateToggle({Name = "Magnet triggerbot"})
-            Section:CreateSlider({Name = "Magnet FOV", Suffix = "°", Value = 10, Minimum = 0, Maximum = 90, Decimals = 0.1})
-            Section:CreateSlider({Name = "Magnet speed", Suffix = "%", Value = 50, Minimum = 1, Maximum = 100})
-            Section:CreateSlider({Name = "Magnet accuracy", Suffix = "%", Value = 60, Minimum = 0, Maximum = 100})
-            Section:CreateDropdown({Name = "Magnet priority", Value = "Closest", Options = {"Closest", "Head", "Body"}})
-        end
-
-        local Section = LegitPage:CreateSection({Category = i, Name = "Bullet Redirection", Side = 2, Length = 0.5}) do
-            Section:CreateToggle({Name = "Silent aim"})
-            Section:CreateSlider({Name = "Maximum FOV", Suffix = "°", Value = 10, Minimum = 0, Maximum = 90, Decimals = 0.1})
-            Section:CreateSlider({Name = "Spread", Suffix = "/10st", Value = 3, Minimum = 0, Maximum = 10, Decimals = 0.1, Custom = function(Value)
-                if Value == 0 then
-                    return "Off"
-                end
-            end})
-            Section:CreateSlider({Name = "Hit chance", Suffix = "%", Value = 50, Minimum = 0, Maximum = 100, Custom = function(Value)
-                if Value == 0 then
-                    return "Off"
-                end
-            end})
-            Section:CreateSlider({Name = "Accuracy", Suffix = "%", Value = 70, Minimum = 0, Maximum = 100})
-            Section:CreateSlider({Name = "Point scale", Suffix = "%", Value = 62, Minimum = 0, Maximum = 95})
-            Section:CreateDropdown({Name = "Hitscan priority", Value = "Closest", Options = {"Closest", "Head", "Body"}})
-            Section:CreateCombobox({Name = "Hitscan hitboxes", Value = {"Head", "Body", "Arms", "Legs"}, Options = {"Head", "Body", "Arms", "Legs"}})
-            Section:CreateToggle({Name = "Adjust for bullet drop"})
-            Section:CreateToggle({Name = "Adjust for target movement"})
-            Section:CreateToggle({Name = "Visualize FOV"})
-        end
-    end
-
-    -- Visuals
-    do
-        local Section = VisualsPage:CreateSection({Name = "Player ESP", Side = 1, Length = 0.6}) do
-            Section:CreateHotkey({Name = "Activation type", Mode = "Always on"})
-            Section:CreateToggle({Name = "Teammates"})
-            Section:CreateToggle({Name = "Dormant"})
-            Section:CreateToggle({Name = "Bounding box"}):CreateColorpicker({Color = Color3.fromRGB(255, 255, 255), Transparency = 0.51})
-            Section:CreateToggle({Name = "Health bar"})
-            Section:CreateToggle({Name = "Name"}):CreateColorpicker({Color = Color3.fromRGB(255, 255, 255), Transparency = 0.78})
-            Section:CreateToggle({Name = "Flags"})
-            Section:CreateToggle({Name = "Weapon text"})
-            Section:CreateToggle({Name = "Weapon icon"}):CreateColorpicker({Color = Color3.fromRGB(255, 255, 255), Transparency = 0.4})
-            Section:CreateToggle({Name = "Ammo"}):CreateColorpicker({Color = Color3.fromRGB(80, 140, 200), Transparency = 0.9})
-            Section:CreateToggle({Name = "Distance"})
-            Section:CreateToggle({Name = "Glow"}):CreateColorpicker({Color = Color3.fromRGB(180, 60, 120), Transparency = 0.6})
-            Section:CreateToggle({Name = "Hit marker"})
-            Section:CreateToggle({Name = "Hit marker sound"})
-            Section:CreateToggle({Name = "Visualize aimbot"}):CreateColorpicker({Color = Color3.fromRGB(20, 100, 255), Transparency = 0.5})
-            Section:CreateToggle({Name = "Visualize aimbot (safe point)"}):CreateColorpicker({Color = Color3.fromRGB(255, 20, 20)})
-            Section:CreateToggle({Name = "Visualize sounds"})
-            Section:CreateToggle({Name = "Line of sight"}):CreateColorpicker({Color = Color3.fromRGB(255, 0, 0)})
-            Section:CreateToggle({Name = "Money"})
-            Section:CreateToggle({Name = "Skeleton"}):CreateColorpicker({Color = Color3.fromRGB(255, 255, 170)})
-            Section:CreateToggle({Name = "Out of FOV arrow"}):CreateColorpicker({Color = Color3.fromRGB(255, 255, 255)})
-        end
-
-        local Section = VisualsPage:CreateSection({Name = "Colored models", Side = 1, Length = 0.5}) do
-            Section:CreateToggle({Name = "Player"}):CreateColorpicker({Color = Color3.fromRGB(150, 200, 60)})
-            Section:CreateToggle({Name = "Player behind wall"}):CreateColorpicker({Color = Color3.fromRGB(60, 120, 180), Transparency = 0.7})
-            Section:CreateToggle({Name = "Teammate"}):CreateColorpicker({Color = Color3.fromRGB(150, 150, 150)})
-            Section:CreateToggle({Name = "Teammate behind wall"}):CreateColorpicker({Color = Color3.fromRGB(255, 255, 255)})
-        end
-    end
-
-    local Section = Menu.Window.Pages[5]:CreateSection({Name = "Miscellaneous", Side = 1, Length = 1}) do
-        Section:CreateSlider({Name = "Override FOV", Value = 90, Minimum = 1, Maximum = 120, Suffix = "°"})
-        Section:CreateSlider({Name = "Override zoom FOV", Value = 100, Minimum = 0, Maximum = 100, Suffix = "%"})
-        Section:CreateToggle({Name = "Knifebot"})
-        --Section:CreateCombobox({Value = {"Swing", "Full stab"}, Options = {"Swing", "Full stab"}})
-        Section:CreateToggle({Name = "Zeusbot"})
-        Section:CreateToggle({Name = "Automatic weapons"})
-        --Section:CreateSlider({Value = 0, Suffix = "ms"})
-        Section:CreateToggle({Name = "Quick switch", Value = true})
-        Section:CreateToggle({Name = "Reveal competetive ranks"})
-        Section:CreateToggle({Name = "Reveal Overwatch players"})
-        Section:CreateToggle({Name = "Auto-accept matchmaking", Value = true})
-        Section:CreateToggle({Name = "Clan tag spammer"})
-        Section:CreateToggle({Name = "Log weapon purchases"})
-        Section:CreateToggle({Name = "Log damage dealt"})
-        Section:CreateToggle({Name = "Automatic grenade release"}):CreateHotkey({Mode = "Toggle"})
-        Section:CreateToggle({Name = "Super toss"})
-        Section:CreateToggle({Name = "Ping spike"}):CreateHotkey({Mode = "On hotkey"})
-        --Section:CreateSlider({Value = 200, Minimum = 0, Maximum = 300, Suffix = "ms"})
-        Section:CreateHotkey({Name = "Free look", Mode = "On hotkey"})
-        Section:CreateToggle({Name = "Persistent kill feed", Value = true})
-        Section:CreateHotkey({Name = "Last second defuse", Key = Enum.KeyCode.R, Mode = "On hotkey"})
-        Section:CreateToggle({Name = "Disable sv_pure", Value = true})
-        Section:CreateToggle({Name = "Rebuy fix", Value = true})
-        Section:CreateToggle({Name = "Draw console output", Value = true})
-        Section:CreateButton({Name = "Steal player name", Confirm = true})
-        Section:CreateButton({Name = "Dump MM wins", Confirm = true})
-    end
-
-    local Section = Menu.Window.Pages[5]:CreateSection({Name = "Movement", Side = 2, Length = 0.5}) do
-        Section:CreateToggle({Name = "Standalone quick stop"})
-        Section:CreateToggle({Name = "Infinite duck", Risky = true})
-        Section:CreateToggle({Name = "Easy strafe"})
-        Section:CreateToggle({Name = "Bunny hop"})
-        Section:CreateToggle({Name = "Air strafe"})
-        --Section:CreateDropdown({Name = "Air strafe direction", Value = "View angles", Options = {"View angles", "Movement key"}})
-        --Section:CreateSlider({Name = "Air strafe smoothing", Value = 100, Minimum = 0, Maximum = 100, Suffix = "%"})
-        --Section:CreateToggle({Name = "Avoid collisions"})
-        --Section:CreateToggle({Name = "Z-Hop"}):CreateHotkey({Key = Enum.KeyCode.T, Mode = "Toggle"})
-        --Section:CreateToggle({Name = "Pre-speed"}):CreateHotkey({Key = Enum.KeyCode.F, Mode = "Toggle"})
-        Section:CreateToggle({Name = "No fall damage"}):CreateColorpicker({Color = Color3.fromRGB(19, 159, 254)})
-        Section:CreateDropdown({Name = "Air duck", Value = "Off", Options = {"Off", "Spam"}})
-        Section:CreateToggle({Name = "Blockbot"}):CreateHotkey({Mode = "Toggle"})
-        Section:CreateToggle({Name = "Jump at edge"}):CreateHotkey({Key = Enum.UserInputType.MouseButton3, Mode = "On hotkey"})
-        Section:CreateToggle({Name = "Fast walk"})
-    end
-
-    local Section = Menu.Window.Pages[5]:CreateSection({Name = "Settings", Side = 2, Length = 0.5}) do
-        Section:CreateHotkey({Name = "Menu key", Key = Enum.KeyCode.Home, Changed = function(Key)
-            Menu.Keys = {[Key] = true}
-        end})
-        Section:CreateColorpicker({Name = "Menu color", Color = Menu.Theme["Accent"], Callback = function(Color)
-            Menu:ChangeThemeColor("Accent", Color)
-        end})
-        Section:CreateDropdown({Name = "DPI scale", Value = "100%", Options = {"75%", "100%", "125%", "150%", "200%"}})
-        Section:CreateToggle({Name = "Draw console output"})
-        Section:CreateToggle({Name = "Hide from OBS"})
-        Section:CreateToggle({Name = "Low FPS warning"})
-        Section:CreateToggle({Name = "Lock menu layout"})
-        Section:CreateButton({Name = "Reset menu layout", Confirm = true})
-        Section:CreateButton({Name = "Unload", Confirm = true})
-    end
-
-    local Section = Menu.Window.Pages[8]:CreateSection({Name = "Presets", Side = 1, Length = 1}) do
-        Section:CreateList()
-        Section:CreateTextbox()
-        Section:CreateButton({Name = "Load"})
-        Section:CreateButton({Name = "Save"})
-        Section:CreateButton({Name = "Delete"})
-        Section:CreateButton({Name = "Reset"})
-        Section:CreateButton({Name = "Import from clipboard"})
-        Section:CreateButton({Name = "Export to clipboard"})
-    end
-
-    local Section = Menu.Window.Pages[8]:CreateSection({Name = "Lua", Side = 2, Length = 1}) do
-        Section:CreateToggle({Name = "Enabled", Value = true})
-        Section:CreateToggle({Name = "Allow unsafe scripts"})
-        Section:CreateButton({Name = "Reload active scripts"})
-        Section:CreateSearchList({Length = 306, Options = {"1potential 0fix", "3rd person (1)", "acid_beta", "acid_debug", "acid_user", "aethletic-gs", "grenade helper", "grenade helper debug", "yaw fix", "roll beta", "rusolver (1)", "rusolver", "network"}})
-        Section:CreateLabel({Text = "Updated 44 days ago"})
-        Section:CreateToggle({Name = "Load on startup"})
-        Section:CreateButton({Name = "Load script"})
-    end
-
-    Menu.Window:Open()
 end
 
 return Library
