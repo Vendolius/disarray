@@ -1369,8 +1369,9 @@ local Success, Error = pcall(function()
             end
             
             local BulletData = {
-                Direction = Direction,
                 Origin = CameraPosition,
+                Direction = Direction,
+                Distance = BulletDistance,
                 Hits = Hits
             }
             
