@@ -42,6 +42,7 @@ local Success, Error = pcall(function()
     local Remove = table.remove
     local Rep = string.rep
 
+    local ReplicatedStorage = GetService(Game, "ReplicatedStorage")
     local RunService = GetService(Game, "RunService")
     local Workspace = GetService(Game, "Workspace")
     local Players = GetService(Game, "Players")
@@ -68,6 +69,8 @@ local Success, Error = pcall(function()
     local Camera   = {}
     local Info     = {}
     local Esp      = {}
+
+
 
 
     local function RecursivePrint(Table, Indent)
@@ -273,14 +276,8 @@ local Success, Error = pcall(function()
                         end
                     end)
 
-                    Data.Humanoid.HealthChanged:Connect(function()
+                    Data.Humanoid.HealthChanged:Connect(function(New)
                         if not Data.Humanoid then return end
-
-                        local Health = Data.Humanoid.Health
-                        if Health <= 0 then
-                            Data.OnDeath()
-                            return
-                        end
 
                         Data.Health = Health
                         Data.MaxHealth = Data.Humanoid.MaxHealth
@@ -306,7 +303,7 @@ local Success, Error = pcall(function()
                 Player.CharacterAdded:Connect(Data.OnSpawn)
                 local Character = Player.Character
                 if Character then
-                    Spawn(Data.OnSpawn, Player.Character)
+                    Spawn(Data.OnSpawn, Character)
                 end
 
                 Info.PlayersIndex += 1
