@@ -1318,6 +1318,10 @@ local Success, Error = pcall(function()
             local CurrentWeapon = InventoryController.getCurrentEquipped()
             if not CurrentWeapon or not CurrentWeapon.Properties then return end
             
+            if CurrentWeapon.Rounds <= 0 then
+                return
+            end
+            
             local FireRate = CurrentWeapon.Properties.FireRate or 0.1
             local CurrentTime = Tick()
             
@@ -1369,19 +1373,20 @@ local Success, Error = pcall(function()
             end
             
             local BulletData = {
-                Origin = CameraPosition,
                 Direction = Direction,
-                Distance = BulletDistance,
+                Origin = CameraPosition,
                 Hits = Hits
             }
+            
+            CurrentWeapon.Rounds = CurrentWeapon.Rounds - 1
             
             ByteNet.Inventory.ShootWeapon.Send({
                 IsSniperScoped = CurrentWeapon.IsSniperScoped or false,
                 ShootingHand = CurrentWeapon.ShootingHand or "Right",
-                Identifier = CurrentWeapon.Identifier or "",
-                Capacity = CurrentWeapon.Capacity or 30,
+                Identifier = CurrentWeapon.Identifier,
+                Capacity = CurrentWeapon.Capacity,
                 Bullets = {BulletData},
-                Rounds = CurrentWeapon.Rounds or 30
+                Rounds = CurrentWeapon.Rounds
             })
             
             local FinalHitPosition = #Hits > 0 and Hits[#Hits].Position or FirstHitPosition
