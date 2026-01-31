@@ -1,3 +1,4 @@
+-- ragebot is very perfect lol
 local Success, Error = pcall(function()
     local Tick = tick
     local Game = game
