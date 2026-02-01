@@ -1339,247 +1339,218 @@
         RenderStepped:Connect(Visuals.ApplyWorldVisuals)
     end
 
-        -- Ragebot
-        do
-            local RaycastLib = require(ReplicatedStorage.Shared.Raycast)
-            local ByteNet = require(ReplicatedStorage.Database.Security.Remotes)
-            local GetRayIgnore = require(ReplicatedStorage.Components.Common.GetRayIgnore)
-            local InventoryController = require(ReplicatedStorage.Controllers.InventoryController)
-            
-            Ragebot.LastShot = 0
-            
-            Ragebot.CanPenetrate = function(Origin, Direction, Distance, Penetration, TargetCharacter)
-                if Penetration <= 0 then return false end
-                
-                local Hits = RaycastLib.castThrough(Origin, Direction * Distance, Penetration, GetRayIgnore())
-                
-                if not Hits or #Hits == 0 then return false end
-                
-                for _, Hit in ipairs(Hits) do
-                    if Hit.instance and Hit.instance:IsDescendantOf(TargetCharacter) then
-                        return true
-                    end
-                end
-                
-                return false
+    -- Ragebot
+    do
+        local RaycastLib = require(ReplicatedStorage.Shared.Raycast)
+        local ByteNet = require(ReplicatedStorage.Database.Security.Remotes)
+        local GetRayIgnore = require(ReplicatedStorage.Components.Common.GetRayIgnore)
+        local InventoryController = require(ReplicatedStorage.Controllers.InventoryController)
+        
+        Ragebot.LastShot = 0
+        Ragebot.Target = nil
+        
+        Ragebot.GetTarget = function()
+            local Weapon = InventoryController.getCurrentEquipped()
+            if not Weapon or not Weapon.Properties or not Weapon.Rounds or Weapon.Rounds <= 0 then
+                return
             end
             
-            Ragebot.GetBestTarget = function()
-                local BestTarget = nil
-                local BestDistance = Infinite
-                local LocalTeam = LocalPlayer:GetAttribute("Team")
+            local LocalTeam = LocalPlayer:GetAttribute("Team")
+            local IgnoreTeam = Flags["ragebot ignore team"].Value
+            local TargetPart = Flags["ragebot target part"].Value or "Head"
+            local FovLimit = Rad(Flags["ragebot fov limit"].Value)
+            local AutoWall = Flags["ragebot auto wall"].Value
+            
+            local CameraPosition = CurrentCamera.CFrame.Position
+            local CameraLook = CurrentCamera.CFrame.LookVector
+            
+            local BestTarget, BestAngle = nil, FovLimit
+            
+            for i = 1, Info.PlayersIndex do
+                local Data = Info.Players[i]
                 
-                local IgnoreTeam = Flags["ragebot ignore team"] and Flags["ragebot ignore team"].Value
-                local AutoWall = Flags["ragebot auto wall"] and Flags["ragebot auto wall"].Value
-                local TargetPart = Flags["ragebot target part"] and Flags["ragebot target part"].Value or "Head"
-                local FovLimit = Flags["ragebot fov limit"] and Flags["ragebot fov limit"].Value or 180
+                if not Data.RootPosition or Data.Health <= 0 then
+                    continue
+                end
                 
-                for i = 1, Info.PlayersIndex do
-                    local Data = Info.Players[i]
-                    local PlayerTeam = Data.Player:GetAttribute("Team")
+                if not IgnoreTeam and LocalTeam == Data.Player:GetAttribute("Team") then
+                    continue
+                end
+                
+                local Part = Data.BodyParts[TargetPart] or Data.BodyParts.Head
+                if not Part then
+                    continue
+                end
+                
+                local PartPosition = Part.Position
+                local Direction = (PartPosition - CameraPosition).Unit
+                local Angle = Acos(Dot(CameraLook, Direction)) * 2
+                
+                if Angle >= BestAngle then
+                    continue
+                end
+                
+                local RayParams = RaycastParams.new()
+                RayParams.FilterType = Enum.RaycastFilterType.Exclude
+                RayParams.FilterDescendantsInstances = {LocalPlayer.Character}
+                local VisCheck = Workspace:Raycast(CameraPosition, Direction * 1000, RayParams)
+                
+                if VisCheck and VisCheck.Instance:IsDescendantOf(Data.Character) then
+                    BestTarget = Data
+                    BestAngle = Angle
+                elseif AutoWall then
+                    local Penetration = Weapon.Properties.Penetration or 0
+                    local Hits = RaycastLib.castThrough(CameraPosition, Direction * 1000, Penetration, GetRayIgnore())
                     
-                    if Data.Character and Data.Health > 0 and Data.RootPart then
-                        if IgnoreTeam or LocalTeam ~= PlayerTeam then
-                            local TargetBodyPart = Data.BodyParts[TargetPart] or Data.BodyParts.Head
-                            if TargetBodyPart then
-                                local TargetPosition = TargetBodyPart.Position
-                                local CameraPosition = CurrentCamera.CFrame.Position
-                                local Direction = (TargetPosition - CameraPosition).Unit
-                                local Distance = (TargetPosition - CameraPosition).Magnitude
-                                
-                                local ScreenPosition = CurrentCamera:WorldToScreenPoint(TargetPosition)
-                                local ScreenCenter = NewVector2(ScreenSizeX / 2, ScreenSizeY / 2)
-                                local FovDistance = (NewVector2(ScreenPosition.X, ScreenPosition.Y) - ScreenCenter).Magnitude
-                                local FovAngle = Atan2(FovDistance, ScreenSizeY) * ToDeg
-                                
-                                if FovAngle <= FovLimit and Distance < BestDistance then
-                                    local RayParams = RaycastParams.new()
-                                    RayParams.FilterType = Enum.RaycastFilterType.Exclude
-                                    RayParams.FilterDescendantsInstances = {LocalPlayer.Character, CurrentCamera}
-                                    local VisCheck = Workspace:Raycast(CameraPosition, Direction * Distance, RayParams)
-                                    local IsVisible = VisCheck and VisCheck.Instance and VisCheck.Instance:IsDescendantOf(Data.Character)
-                                    
-                                    if IsVisible then
-                                        BestTarget = Data
-                                        BestDistance = Distance
-                                    elseif AutoWall then
-                                        local CurrentWeapon = InventoryController.getCurrentEquipped()
-                                        local WeaponPenetration = CurrentWeapon and CurrentWeapon.Properties and CurrentWeapon.Properties.Penetration or 0
-                                        
-                                        if Ragebot.CanPenetrate(CameraPosition, Direction, Distance, WeaponPenetration, Data.Character) then
-                                            BestTarget = Data
-                                            BestDistance = Distance
-                                        end
-                                    end
-                                end
-                            end
+                    for _, Hit in ipairs(Hits) do
+                        if Hit.instance and Hit.instance:IsDescendantOf(Data.Character) then
+                            BestTarget = Data
+                            BestAngle = Angle
+                            break
                         end
                     end
                 end
-                
-                return BestTarget
             end
             
-            Ragebot.Shoot = function()
-                if not (Flags["ragebot enabled"] and Flags["ragebot enabled"].Value) then
-                    return
+            return BestTarget
+        end
+        
+        Ragebot.Shoot = function(Target)
+            local Weapon = InventoryController.getCurrentEquipped()
+            local TargetPart = Flags["ragebot target part"].Value or "Head"
+            local Part = Target.BodyParts[TargetPart] or Target.BodyParts.Head
+            
+            if not Part then
+                return
+            end
+            
+            local CameraPosition = CurrentCamera.CFrame.Position
+            local Direction = (Part.Position - CameraPosition).Unit
+            local Penetration = Weapon.Properties.Penetration or 0
+            local Range = Weapon.Properties.Range or 500
+            local RayIgnore = GetRayIgnore()
+            
+            local FirstHit = RaycastLib.cast(CameraPosition, Direction * Range, nil, RayIgnore)
+            if not FirstHit or not FirstHit.instance then
+                return
+            end
+            
+            local PenetrationHits = RaycastLib.castThrough(FirstHit.position - Direction * 0.001, Direction * (Penetration + 0.001), Penetration, RayIgnore)
+            
+            local Hits = {}
+            local LastPosition = CameraPosition
+            
+            for Index, Hit in ipairs(PenetrationHits) do
+                if Hit.instance and Hit.material then
+                    Insert(Hits, {
+                        Distance = (Hit.position - LastPosition).Magnitude,
+                        Instance = Hit.instance,
+                        Position = Hit.position,
+                        Normal = Hit.normal or NewVector3(0, 0, 0),
+                        Material = Hit.material.Name,
+                        Exit = Index % 2 == 0
+                    })
+                    LastPosition = Hit.position
                 end
-                
-                if not (Flags["ragebot auto shoot"] and Flags["ragebot auto shoot"].Value) then
-                    return
-                end
-                
-                local CurrentWeapon = InventoryController.getCurrentEquipped()
-                if not CurrentWeapon or not CurrentWeapon.Properties or not CurrentWeapon.Rounds or CurrentWeapon.Rounds <= 0 then
-                    return
-                end
-                
-                local FireRate = CurrentWeapon.Properties.FireRate or 0.1
-                local CurrentTime = Tick()
-                
-                if CurrentTime - Ragebot.LastShot < FireRate then
-                    return
-                end
-                
-                local Target = Ragebot.GetBestTarget()
-                if not Target then
-                    return
-                end
-                
-                local TargetPart = Flags["ragebot target part"] and Flags["ragebot target part"].Value or "Head"
-                local TargetBodyPart = Target.BodyParts[TargetPart] or Target.BodyParts.Head
-                if not TargetBodyPart then
-                    return
-                end
-                
-                local TargetPosition = TargetBodyPart.Position
-                local CameraPosition = CurrentCamera.CFrame.Position
-                local Direction = (TargetPosition - CameraPosition).Unit
-                
-                local Penetration = CurrentWeapon.Properties.Penetration or 0
-                local Range = CurrentWeapon.Properties.Range or 500
-                local RayIgnore = GetRayIgnore()
-                
-                local FirstHit = RaycastLib.cast(CameraPosition, Direction * Range, nil, RayIgnore)
-                if not FirstHit or not FirstHit.instance then
-                    return
-                end
-                
-                local FirstHitPosition = FirstHit.position
-                local BulletDistance = (FirstHitPosition - CameraPosition).Magnitude
-                
-                local PenetrationHits = RaycastLib.castThrough(FirstHitPosition - Direction * 0.001, Direction * (Penetration + 0.001), Penetration, RayIgnore)
-                
-                local Hits = {}
-                local LastPosition = CameraPosition
-                
-                for Index, Hit in ipairs(PenetrationHits) do
-                    if Hit.instance and Hit.material then
-                        local HitData = {
-                            Distance = (Hit.position - LastPosition).Magnitude,
-                            Instance = Hit.instance,
-                            Position = Hit.position,
-                            Normal = Hit.normal or NewVector3(0, 0, 0),
-                            Material = Hit.material.Name,
-                            Exit = Index % 2 == 0
-                        }
-                        Insert(Hits, HitData)
-                        LastPosition = Hit.position
-                    end
-                end
-                
-                local BulletData = {
+            end
+            
+            Weapon.Rounds = Weapon.Rounds - 1
+            
+            ByteNet.Inventory.ShootWeapon.Send({
+                IsSniperScoped = Weapon.IsSniperScoped or false,
+                ShootingHand = Weapon.ShootingHand or "Right",
+                Identifier = Weapon.Identifier,
+                Capacity = Weapon.Capacity,
+                Bullets = {{
                     Direction = Direction,
                     Origin = CameraPosition,
                     Hits = Hits
-                }
-                
-                CurrentWeapon.Rounds = CurrentWeapon.Rounds - 1
-                
-                ByteNet.Inventory.ShootWeapon.Send({
-                    IsSniperScoped = CurrentWeapon.IsSniperScoped or false,
-                    ShootingHand = CurrentWeapon.ShootingHand or "Right",
-                    Identifier = CurrentWeapon.Identifier,
-                    Capacity = CurrentWeapon.Capacity,
-                    Bullets = {BulletData},
-                    Rounds = CurrentWeapon.Rounds
-                })
-                
-                local FinalHitPosition = #Hits > 0 and Hits[#Hits].Position or FirstHitPosition
-                local TracerDistance = (FinalHitPosition - CameraPosition).Magnitude
-                
-                ByteNet.VFX.CreateTracer.Send({
-                    Distance = TracerDistance,
-                    Origin = CameraPosition,
-                    Target = FinalHitPosition
-                })
-                
-                Ragebot.LastShot = CurrentTime
+                }},
+                Rounds = Weapon.Rounds
+            })
+            
+            local FinalPosition = #Hits > 0 and Hits[#Hits].Position or FirstHit.position
+            ByteNet.VFX.CreateTracer.Send({
+                Distance = (FinalPosition - CameraPosition).Magnitude,
+                Origin = CameraPosition,
+                Target = FinalPosition
+            })
+            
+            Ragebot.LastShot = Tick()
+        end
+        
+        Ragebot.Step = function()
+            local Enabled = Flags["ragebot enabled"] and Flags["ragebot enabled"].Value
+            local AutoShoot = Flags["ragebot auto shoot"] and Flags["ragebot auto shoot"].Value
+            
+            if not Enabled or not AutoShoot then
+                return
             end
             
-            Ragebot.Step = function()
-                if Flags["ragebot enabled"] and Flags["ragebot enabled"].Value then
-                    Ragebot.Shoot()
-                end
+            local Weapon = InventoryController.getCurrentEquipped()
+            if not Weapon or not Weapon.Properties then
+                return
             end
             
-            Ragebot.Initialize = function()
-                Heartbeat:Connect(Ragebot.Step)
+            local FireRate = (Weapon.Properties.FireRate or 0.1) / 3
+            if Tick() - Ragebot.LastShot < FireRate then
+                return
+            end
+            
+            local Target = Ragebot.GetTarget()
+            if Target then
+                Ragebot.Shoot(Target)
             end
         end
+        
+        Ragebot.Initialize = function()
+            RenderStepped:Connect(Ragebot.Step)
+        end
+    end
 
         -- Anti Aim
         do
             local CharacterController = require(ReplicatedStorage.Controllers.CharacterController)
             local OriginalCameraOffset = nil
             
-            AntiAim.Step = function()
-                local Character = CharacterController.getCurrentCharacter()
-                if not Character or not Character.Humanoid then return end
-                
-                local ThirdPersonEnabled = Flags["antiaim third person enabled"]
-                if ThirdPersonEnabled and ThirdPersonEnabled.Value then
-                    local DistanceFlag = Flags["antiaim third person distance"]
-                    local Distance = DistanceFlag and DistanceFlag.Value or 10
-                    
-                    if not OriginalCameraOffset then
-                        OriginalCameraOffset = Character.Humanoid.CameraOffset
-                    end
-                    
-                    Character.Humanoid.CameraOffset = NewVector3(0, 0, Distance)
-                else
-                    if OriginalCameraOffset then
-                        if Character.Humanoid then
-                            Character.Humanoid.CameraOffset = OriginalCameraOffset
-                        end
-                        OriginalCameraOffset = nil
-                    end
-                end
-                
-                local AntiAimEnabled = Flags["antiaim enabled"]
-                if AntiAimEnabled and AntiAimEnabled.Value and Character.HumanoidRootPart then
-                    local AntiAimMode = Flags["antiaim mode"]
-                    local Mode = AntiAimMode and AntiAimMode.Value or "Spin"
-                    
-                    local YawValue = 0
-                    local PitchValue = 0
-                    
-                    if Mode == "Spin" then
-                        local SpinSpeed = Flags["antiaim spin speed"] and Flags["antiaim spin speed"].Value or 10
-                        YawValue = (Tick() * SpinSpeed * 10) % 360
-                    elseif Mode == "Jitter" then
-                        local Jitter = Tick() % 0.2 < 0.1 and 90 or -90
-                        YawValue = Jitter
-                    elseif Mode == "Backwards" then
-                        YawValue = 180
-                    elseif Mode == "Custom" then
-                        YawValue = Flags["antiaim custom yaw"] and Flags["antiaim custom yaw"].Value or 0
-                        PitchValue = Flags["antiaim custom pitch"] and Flags["antiaim custom pitch"].Value or 0
-                    end
-                    
-                    Character.HumanoidRootPart.CFrame = Character.HumanoidRootPart.CFrame * CFrame.Angles(Rad(PitchValue), Rad(YawValue), 0)
-                end
+        AntiAim.Step = function()
+            local Character = CharacterController.getCurrentCharacter()
+            if not Character or not Character.Humanoid or not Character.HumanoidRootPart then
+                return
             end
+            
+            if Flags["antiaim third person enabled"].Value then
+                if not OriginalCameraOffset then
+                    OriginalCameraOffset = Character.Humanoid.CameraOffset
+                end
+                Character.Humanoid.CameraOffset = NewVector3(0, 0, Flags["antiaim third person distance"].Value)
+            elseif OriginalCameraOffset then
+                Character.Humanoid.CameraOffset = OriginalCameraOffset
+                OriginalCameraOffset = nil
+            end
+            
+            if not Flags["antiaim enabled"].Value then
+                return
+            end
+            
+            local Mode = Flags["antiaim mode"].Value
+            local Yaw, Pitch = 0, 0
+            
+            if Mode == "Spin" then
+                Yaw = (Tick() * Flags["antiaim spin speed"].Value * 36) % 360
+            elseif Mode == "Jitter" then
+                Yaw = Tick() % 0.2 < 0.1 and 90 or -90
+            elseif Mode == "Backwards" then
+                Yaw = 180
+            elseif Mode == "Custom" then
+                Yaw = Flags["antiaim custom yaw"].Value
+                Pitch = Flags["antiaim custom pitch"].Value
+            end
+            
+            local RootCFrame = Character.HumanoidRootPart.CFrame
+            local Position = RootCFrame.Position
+            Character.HumanoidRootPart.CFrame = NewCFrame(Position) * CFrame.Angles(Rad(Pitch), Rad(Yaw), 0)
+        end
             
             AntiAim.Initialize = function()
                 Heartbeat:Connect(AntiAim.Step)
